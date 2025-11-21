@@ -9,6 +9,8 @@
 #include "rdr/platform.h"
 #include "rdr/primitive.h"
 #include "rdr/ray.h"
+#include <vector>
+#include <algorithm> 
 
 RDR_NAMESPACE_BEGIN
 
@@ -132,7 +134,7 @@ typename BVHTree<_>::IndexType BVHTree<_>::build(
   AABB prebuilt_aabb;
   for (IndexType span_index = span_left; span_index < span_right; ++span_index)
     prebuilt_aabb.unionWith(nodes[span_index].getAABB());
-
+  
   // TODO(HW3): setup the stop criteria
   //
   // You should fill in the stop criteria here.
@@ -143,7 +145,7 @@ typename BVHTree<_>::IndexType BVHTree<_>::build(
   // @see span_left: The left index of the current span
   // @see span_right: The right index of the current span
   //
-  /* if ( */ UNIMPLEMENTED; /* ) */
+  if (depth >= CUTOFF_DEPTH || (span_right - span_left) <= 1)
   {
     // create leaf node
     const auto &node = nodes[span_left];
@@ -154,11 +156,6 @@ typename BVHTree<_>::IndexType BVHTree<_>::build(
     return internal_nodes.size() - 1;
   }
 
-  // You'll notice that the implementation here is different from the KD-Tree
-  // ones, which re-use the node for both data-storing and organizing the real
-  // tree structure. Here, for simplicity and generality, we use two different
-  // types of nodes to ensure simplicity in interface, i.e. provided node does
-  // not need to be aware of the tree structure.
   InternalNode result(span_left, span_right);
 
   // const int &dim = depth % 3;
@@ -167,21 +164,17 @@ typename BVHTree<_>::IndexType BVHTree<_>::build(
   IndexType split = INVALID_INDEX;
 
   if (hprofile == EHeuristicProfile::EMedianHeuristic) {
-use_median_heuristic:
+    use_median_heuristic:
     split = span_left + count / 2;
-    // Sort the nodes
-    // after which, all centroids in [span_left, split) are LT than right
-    // clang-format off
+        split = span_left + count / 2;
 
-    // TODO(HW3): implement the median split here
-    //
-    // You should sort the nodes in [span_left, span_right) according to
-    // their centroid's `dim`-th dimension, such that all nodes in
-    // [span_left, split) are less than those in [split, span_right)
-    //
-    // You may find `std::nth_element` useful here.
-
-    UNIMPLEMENTED;
+    std::nth_element(
+        nodes.begin() + span_left,
+        nodes.begin() + split,
+        nodes.begin() + span_right,
+        [dim](const NodeType &a, const NodeType &b) {
+          return a.getAABB().getCenter()[dim] < b.getAABB().getCenter()[dim];
+        });
 
     // clang-format on
   } else if (hprofile == EHeuristicProfile::ESurfaceAreaHeuristic) {

@@ -86,7 +86,6 @@ Vec3f PerfectRefraction::sample(
   bool entering = cos_theta_i > 0;
   // Corrected eta by direction
   Float eta_corrected = entering ? eta : 1.0F / eta;
-
   // TODO(HW3): implement the refraction logic here.
   //
   // You should set the `interaction.wi` to the direction of the "in-coming
@@ -103,8 +102,13 @@ Vec3f PerfectRefraction::sample(
   // You may find the following functions useful:
   // @see Refract for refraction calculation.
   // @see Reflect for reflection calculation.
-
-  UNIMPLEMENTED;
+  Vec3f refracted;
+  if (Refract(interaction.wo, normal, eta_corrected, refracted)) {
+    interaction.wi = Normalize(refracted);
+  } 
+  else {
+    interaction.wi = Normalize(Reflect(interaction.wo, normal));
+  }
 
   // Set the pdf and return value, we dont need to understand the value now
   if (pdf != nullptr) *pdf = 1.0F;

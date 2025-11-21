@@ -30,20 +30,24 @@ bool AABB::isOverlap(const AABB &other) const {
 }
 
 bool AABB::intersect(const Ray &ray, Float *t_in, Float *t_out) const {
-  // TODO(HW3): implement ray intersection with AABB.
-  // ray distance for two intersection points are returned by pointers.
-  //
-  // This method should modify t_in and t_out as the "time"
-  // when the ray enters and exits the AABB respectively.
-  //
-  // And return true if there is an intersection, false otherwise.
-  //
-  // Useful Functions:
-  // @see Ray::safe_inverse_direction
-  //    for getting the inverse direction of the ray.
-  // @see Min/Max/ReduceMin/ReduceMax
-  //    for vector min/max operations.
-  UNIMPLEMENTED;
+  Vec3f inv_dir = ray.safe_inverse_direction;
+
+  Vec3f t0 = (low_bnd   - ray.origin) * inv_dir;
+  Vec3f t1 = (upper_bnd - ray.origin) * inv_dir;
+
+  Vec3f t_enter = Min(t0, t1);
+  Vec3f t_exit  = Max(t0, t1);
+  Float t_enter_max = ReduceMax(t_enter);
+  Float t_exit_min  = ReduceMin(t_exit);
+
+    // 判断相交条件
+  if (t_exit_min < 0) return false;            
+  if (t_enter_max > t_exit_min) return false;    
+
+    // 返回交点
+  if (t_in != nullptr)  *t_in  = t_enter_max;
+  if (t_out != nullptr) *t_out = t_exit_min;
+  return true;
 }
 
 /* ===================================================================== *
@@ -53,7 +57,7 @@ bool AABB::intersect(const Ray &ray, Float *t_in, Float *t_out) const {
  * ===================================================================== */
 
 bool TriangleIntersect(Ray &ray, const uint32_t &triangle_index,
-    const ref<TriangleMeshResource> &mesh, SurfaceInteraction &interaction) {
+  const ref<TriangleMeshResource> &mesh, SurfaceInteraction &interaction) {
   using InternalScalarType = Double;
   using InternalVecType    = Vec<InternalScalarType, 3>;
 
@@ -71,31 +75,30 @@ bool TriangleIntersect(Ray &ray, const uint32_t &triangle_index,
   InternalVecType v1  = Cast<InternalScalarType>(vertices[v_idx[1]]);
   InternalVecType v2  = Cast<InternalScalarType>(vertices[v_idx[2]]);
 
-  // TODO(HW3): implement ray-triangle intersection test.
-  // You should compute the u, v, t as InternalScalarType
-  //
-  //   InternalScalarType u = ...;
-  //   InternalScalarType v = ...;
-  //   InternalScalarType t = ...;
-  //
-  // And exit early with `return false` if there is no intersection.
-  //
-  // The intersection points is denoted as:
-  // (1 - u - v) * v0 + u * v1 + v * v2 == ray.origin + t * ray.direction
-  // where the left side is the barycentric interpolation of the triangle
-  // vertices, and the right side is the parametric equation of the ray.
-  //
-  // You should also make sure that:
-  // u >= 0, v >= 0, u + v <= 1, and, ray.t_min <= t <= ray.t_max
-  //
-  // Useful Functions:
-  // You can use @see Cross and @see Dot for determinant calculations.
+  const InternalVecType edge1 = v1 - v0;
+  const InternalVecType edge2 = v2 - v0;
+  const InternalVecType pvec  = Cross( dir, edge2);
+  const InternalScalarType det = Dot(edge1, pvec);
+  const InternalScalarType eps = InternalScalarType(1.0000e-12);
 
-  // Delete the following lines after you implement the function
-  InternalScalarType u = InternalScalarType(0);
-  InternalScalarType v = InternalScalarType(0);
-  InternalScalarType t = InternalScalarType(0);
-  UNIMPLEMENTED;
+  if (abs(det) < eps) return false;
+
+  const InternalScalarType inv_det = InternalScalarType(1) / det;
+  const InternalVecType tvec = Cast<InternalScalarType>(ray.origin) - v0;
+  const InternalScalarType u = Dot(tvec, pvec) * inv_det;
+
+  if (u < InternalScalarType(0) || u > InternalScalarType(1)) 
+    return false;
+
+  const InternalVecType qvec = Cross(tvec, edge1);
+  const InternalScalarType v = Dot(dir, qvec) * inv_det;
+
+  if (v < InternalScalarType(0) || (u + v) > InternalScalarType(1)) 
+    return false;
+
+  const InternalScalarType t = Dot(edge2, qvec) * inv_det;
+
+  if (!ray.withinTimeRange(static_cast<Float>(t))) return false;
 
   // We will reach here if there is an intersection
 
