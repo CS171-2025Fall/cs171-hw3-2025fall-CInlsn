@@ -40,11 +40,9 @@ bool AABB::intersect(const Ray &ray, Float *t_in, Float *t_out) const {
   Float t_enter_max = ReduceMax(t_enter);
   Float t_exit_min  = ReduceMin(t_exit);
 
-    // 判断相交条件
   if (t_exit_min < 0) return false;            
   if (t_enter_max > t_exit_min) return false;    
 
-    // 返回交点
   if (t_in != nullptr)  *t_in  = t_enter_max;
   if (t_out != nullptr) *t_out = t_exit_min;
   return true;
